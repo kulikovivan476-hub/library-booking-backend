@@ -1,0 +1,33 @@
+name: Backend tests
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: library
+          POSTGRES_PASSWORD: local-ci-only
+          POSTGRES_DB: library_booking_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U library -d library_booking_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      LIBRARY_TEST_DATABASE_URL: postgresql+asyncpg://library:local-ci-only@localhost:5432/library_booking_test
+      DATABASE_URL: postgresql+asyncpg://library:local-ci-only@localhost:5432/library_booking_test
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements-dev.txt
+      - run: alembic upgrade head
+      - run: alembic check
+      - run: pytest -q

@@ -1,0 +1,36 @@
+name: library-booking
+services:
+  db:
+    image: postgres:18
+    environment:
+      POSTGRES_DB: ${DB_NAME:-library}
+      POSTGRES_USER: ${DB_USER:-library}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Задайте DB_PASSWORD в .env}
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - library_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+  api:
+    build: .
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${DB_USER:-library}:${DB_PASSWORD}@db:5432/${DB_NAME:-library}
+      APP_TIMEZONE: ${APP_TIMEZONE:-Europe/Moscow}
+      CORS_ORIGINS: ${CORS_ORIGINS:-["http://localhost:3000","http://localhost:5173"]}
+      SESSION_HOURS: ${SESSION_HOURS:-24}
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8002:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+volumes:
+  library_data:
