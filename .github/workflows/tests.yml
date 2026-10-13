@@ -30,4 +30,4 @@ jobs:
       - run: pip install -r requirements-dev.txt
       - run: alembic upgrade head
       - run: alembic check
-      - run: pytest -q
+      - run: python -m pytest -q
